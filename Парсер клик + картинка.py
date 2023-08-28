@@ -1,7 +1,7 @@
 import webbrowser
 import pandas as pd
-import tkinter as tk
 from tkinter import filedialog
+import tkinter
 from tkinter import *
 import time
 from threading import Thread

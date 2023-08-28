@@ -94,5 +94,39 @@ if not df_merged_to_select.empty:
     df_merged_to_select.to_excel(writer, sheet_name='Sheet1', index=False, header=False)
     writer.save()
 
+wb = openpyxl.load_workbook(fileName)
+ws = wb.active
+#df_to_check = pd.read_excel(fileName, usecols='L', engine='openpyxl', header=None, skiprows=1)
+df_exclude = pd.read_excel('exclude.xlsx', engine='openpyxl', converters={'Исключить': str, 'Убрать': str,
+                                                                          'Заменить': str, 'ЗаменитьНа': str})
+
+exclude_list = df_exclude['Исключить'].to_list()
+change_list = df_exclude['Убрать'].to_list()
+change_list = [item for item in change_list if not(pd.isnull(item)) == True]
+change_list_2 = df_exclude['Заменить'].to_list()
+change_list_2 = [item for item in change_list_2 if not(pd.isnull(item)) == True]
+change_list_3 = df_exclude['ЗаменитьНа'].to_list()
+change_list_3 = [item for item in change_list_3 if not(pd.isnull(item)) == True]
+
+redFill = PatternFill(start_color='FFEE1111', end_color='FFEE1111', fill_type='solid')
+i = 0
+for cell in ws['L']:
+    i += 1
+    numb = 0
+    for item in exclude_list:
+        if item in cell.value.lower():
+            cell.fill = redFill
+            print(item)
+    for item_ch in change_list:
+        if item_ch in cell.value.lower():
+            cell.value = cell.value.lower().replace(item_ch, '')
+            print(item_ch)
+    for item_ch_2 in change_list_2:
+        if item_ch_2 in cell.value.lower():
+            cell.value = cell.value.lower().replace(item_ch_2, change_list_3[numb])
+            print(item_ch_2)
+        numb += 1
+wb.save(fileName)
+
 msg = "ГОТОВО!"
 mb.showinfo("ИНФО", msg)
