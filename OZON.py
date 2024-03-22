@@ -9,6 +9,9 @@ from openpyxl.styles import Alignment
 from openpyxl.styles import PatternFill
 import sqlite3 as sl
 from openpyxl.utils.dataframe import dataframe_to_rows
+import random
+import numpy as np
+
 
 def start_ozon():
     fileName = filedialog.askopenfilename()
@@ -82,6 +85,11 @@ def add_tobaza():
         i += 1
     ws['L1'].value = 'СТАРОЕ НАИМЕНОВАНИЕ'
     ws['M1'].value = 'наименованиетовара/名称/俄文/中文'
+
+    if 'На_перевод' in wb.sheetnames:
+        wb.remove(wb['На_перевод'])
+    if 'с_картинкой' in wb.sheetnames:
+        wb.remove(wb['с_картинкой'])
     wb.save(f'{fileName}-ГОТОВ.xlsx')
 
     msg = "Обновленно!"
@@ -140,8 +148,8 @@ def start_LD():
     mb.showinfo("Информация", msg)
 
 def LD_work():
-    df_baza_LD = pd.read_excel('C:/Users/User/Desktop/РЕЕСТРЫ/БАЗА ЛД.xlsx', sheet_name=0, engine='openpyxl', usecols='A,B,C,D')
     fileName = filedialog.askopenfilename()
+    df_baza_LD = pd.read_excel('C:/Users/User/Desktop/РЕЕСТРЫ/БАЗА ЛД.xlsx', sheet_name=0, engine='openpyxl', usecols='A,B,C,D')
     wb = openpyxl.load_workbook(fileName)
     ws2 = wb['На_перевод']
     df_translate_table = pd.read_excel(fileName, sheet_name='с_картинкой', engine='openpyxl', header=None, usecols='B')
@@ -179,6 +187,10 @@ def LD_work():
         ws[f"M{i}"].value = row
         i += 1
 
+    if 'На_перевод' in wb.sheetnames:
+        wb.remove(wb['На_перевод'])
+    if 'с_картинкой' in wb.sheetnames:
+        wb.remove(wb['с_картинкой'])
     wb.save(f'{fileName}-ГОТОВ.xlsx')
 
     msg = "Готово!"
@@ -219,6 +231,7 @@ def passport_check():
                                 number VARCHAR(6)
                                 );
                             """)
+                    con.execute("""CREATE INDEX index_pass ON pass (series, number)""")
         df_to_baza.to_sql('pass', con, if_exists='replace', index=False)
 
         names = [description[0] for description in con.execute("Select * from pass").description]
@@ -249,10 +262,9 @@ def passport_check():
     df_merged_to_select = df_merged_to_select.drop_duplicates()
     df_merged_to_select = df_merged_to_select.dropna(how='any', axis=0)
     df_merged_to_select = df_merged_to_select[df_merged_to_select['PASSP_SERIES'] != '0']
-
+    redFill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
     print(df_merged_to_select)
     if not df_merged_to_select.empty:
-        yelFill = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')
         wb = openpyxl.load_workbook(fileName)
         ws = wb.active
         parcel_list = df_merged_to_select[0].to_list()
@@ -260,19 +272,15 @@ def passport_check():
         for cell in ws['A']:
             i += 1
             if cell.value in parcel_list:
-                ws[f'O{i}'].fill = yelFill
-                ws[f'P{i}'].fill = yelFill
+                ws[f'O{i}'].fill = redFill
+                ws[f'P{i}'].fill = redFill
                 print('ok')
         wb.save(fileName)
 
-        writer = pd.ExcelWriter(f'{fileName} - список недействительных.xlsx', engine='openpyxl')
-        df_merged_to_select.to_excel(writer, sheet_name='Sheet1', index=False, header=False)
-        writer.save()
-    msg = "ГОТОВО!"
-    mb.showinfo("ИНФО", msg)
+        #writer = pd.ExcelWriter(f'{fileName} - список недействительных.xlsx', engine='openpyxl')
+        #df_merged_to_select.to_excel(writer, sheet_name='Sheet1', index=False, header=False)
+        #writer.save()
 
-def check_excludes():
-    fileName = filedialog.askopenfilename()
     wb = openpyxl.load_workbook(fileName)
     try:
         ws = wb['РЕЕСТР']
@@ -284,29 +292,22 @@ def check_excludes():
 
     exclude_list = df_exclude['Исключить'].to_list()
     change_list = df_exclude['Убрать'].to_list()
-    change_list = [item for item in change_list if not (pd.isnull(item)) == True]
+    change_list = [item for item in change_list if not (pd.isnull(item)) is True]
     change_list_2 = df_exclude['Заменить'].to_list()
-    change_list_2 = [item for item in change_list_2 if not (pd.isnull(item)) == True]
+    change_list_2 = [item for item in change_list_2 if not (pd.isnull(item)) is True]
     change_list_3 = df_exclude['ЗаменитьНа'].to_list()
-    change_list_3 = [item for item in change_list_3 if not (pd.isnull(item)) == True]
+    change_list_3 = [item for item in change_list_3 if not (pd.isnull(item)) is True]
 
-    redFill = PatternFill(start_color='FFEE1111', end_color='FFEE1111', fill_type='solid')
     i = 0
     for cell in ws['L']:
         i += 1
         numb = 0
-        for item in exclude_list:
-            try:
-                if item in cell.value.lower():
-                    cell.fill = redFill
-                    print(item)
-            except:
-                pass
         for item_ch in change_list:
             try:
                 if item_ch in cell.value.lower():
+                    print(cell.value)
                     cell.value = cell.value.lower().replace(item_ch, '')
-                    print(item_ch)
+                    print(cell.value)
             except:
                 pass
         for item_ch_2 in change_list_2:
@@ -316,15 +317,165 @@ def check_excludes():
                     print(item_ch_2)
             except:
                 pass
+    for cell in ws['L']:
+        for item in exclude_list:
+            try:
+                if item in cell.value.lower():
+                    cell.fill = redFill
+                    print(item)
+            except:
+                pass
+
             numb += 1
+    i = 0
+    for cell in ws['O']:
+        print(cell.value)
+        i += 1
+        if cell.value is None:
+            cell.fill = redFill
+
     wb.save(fileName)
 
     msg = "ГОТОВО!"
     mb.showinfo("ИНФО", msg)
 
+
+def pudo():
+    fileName = filedialog.askopenfilename()
+    df_start = pd.read_excel(fileName, sheet_name=0, engine='openpyxl', header=None, usecols='W, AT', skiprows=1)
+    df_start = df_start.rename(columns={22: 'weight', 45: 'chin'})
+    df_tosql = df_start.drop(['weight'], axis=1).drop_duplicates()
+    con = sl.connect('TRANSLATE.db')
+    with con:
+        df_tosql.to_sql('temp_table', con, if_exists='replace', index=False)
+        query_indx = """CREATE INDEX index_chin on temp_table (chin)"""
+        print('index created')
+        con.execute(query_indx)
+        query_join = """SELECT temp_table.chin, transl_cainiao.rus
+                        FROM temp_table
+                        LEFT JOIN transl_cainiao
+                        ON temp_table.chin = transl_cainiao.chin
+                        group by temp_table.chin"""
+
+        df_joined = pd.read_sql(query_join, con)
+        print(df_joined)
+        df_merged = pd.merge(df_start, df_joined, how='left', left_on='chin', right_on='chin')
+
+        list_values = ["Аксессуар из пластика", "Украшение", "Игрушка"]
+        len_df = len(df_merged)
+        df = df_merged.loc[df_merged['rus'].isna()]['rus'].apply(lambda x: random.choices(list_values, k=len_df)[0])
+        df_merged.update(df)
+        df_weight_big = df_merged.loc[df_merged['weight'] >= 3]
+        df_weight_big = df_weight_big.loc[(df_merged['rus'] == 'Аксессуар из пластика') |
+                                       (df_merged['rus'] == 'Украшение') | (df_merged['rus'] == 'Игрушка')]
+        df_weight_big['rus'] = ''
+        print(df_weight_big)
+        writer = pd.ExcelWriter(f'df_weight_big.xlsx', engine='openpyxl')
+        df_merged.to_excel(writer, sheet_name='Sheet1', index=False)
+        writer.save()
+
+        df_merged.update(df_weight_big)
+
+        writer = pd.ExcelWriter(f'df_merged.xlsx', engine='openpyxl')
+        df_merged.to_excel(writer, sheet_name='Sheet1', index=False)
+        writer.save()
+
+        wb = openpyxl.load_workbook(fileName)
+        ws = wb.active
+        i = 2
+        for row in df_merged['rus']:
+            ws[f"AM{i}"].value = row
+            i += 1
+        wb.save(f'{fileName}-ГОТОВ.xlsx')
+
+        msg = "ГОТОВО!"
+        mb.showinfo("ИНФО", msg)
+
+
+def export_warrings():
+    filename = filedialog.askopenfilename()
+    df = pd.read_excel(filename, sheet_name=0, engine='openpyxl', header=None, usecols='A, B', skiprows=1, converters={1: str})
+    df.columns = ['description', 'tnvedCode']
+    print(df)
+    df['tnvedCode9'] = df['tnvedCode'].str[:9]
+    df['tnvedCode6'] = df['tnvedCode'].str[:6]
+    df['tnvedCode4'] = df['tnvedCode'].str[:4]
+
+    df_warnings = pd.read_excel('TNVEDзапрет.xlsx', sheet_name=0, engine='openpyxl', usecols='A, B, C, D', converters={'triger_tnved': str,
+                                                                                                                       'exclud': str})
+
+    df_merged_10 = pd.merge(df, df_warnings, how='left', left_on='tnvedCode', right_on='triger_tnved')
+    df_merged_9 = pd.merge(df_merged_10, df_warnings, how='left', left_on='tnvedCode9', right_on='triger_tnved')
+    df_merged_6 = pd.merge(df_merged_8, df_warnings, how='left', left_on='tnvedCode6', right_on='triger_tnved')
+    df_merged_4 = pd.merge(df_merged_6, df_warnings, how='left', left_on='tnvedCode4', right_on='triger_tnved')
+
+    df_merged_4.columns = ['description', 'tnvedCode', 'tnvedCode9','tnvedCode8', 'tnvedCode6', 'tnvedCode4', 'Триггер_код', 'Описание группы/запрет'
+                           , 'Постановление', 'Искл.', 'По 9 знакам', 'Описание группы/запрет_9', 'Постановление_9', 'Искл._9,',
+                           'По 6 знакам', 'Описание группы/запрет_6', 'Постановление_6', 'Искл._6'
+                           , 'По 4 знакам', 'Описание группы/запрет_4', 'Постановление_4', 'Искл._4']
+    df = df_merged_4
+    df = df.drop('Искл.', axis=1)
+    df = df.drop('Искл._6', axis=1)
+    df = df.drop('Искл._9', axis=1)
+    df['Искл._4'] = df['Искл._4']
+
+    df['Постановление'] = df['Постановление'].fillna(df['Постановление_6'])
+    df['Постановление'] = df['Постановление'].fillna(df['Постановление_4'])
+
+
+    df['Триггер_код'] = df['Триггер_код'].fillna(df['По 6 знакам'])
+    df['Триггер_код'] = df['Триггер_код'].fillna(df['По 4 знакам'])
+
+
+    df['Описание группы/запрет'] = df['Описание группы/запрет'].fillna(df['Описание группы/запрет_6'])
+    df['Описание группы/запрет'] = df['Описание группы/запрет'].fillna(df['Описание группы/запрет_4'])
+
+    writer = pd.ExcelWriter(f'TNVED_запрет_вывоза_результат.xlsx', engine='openpyxl')
+    df.to_excel(writer, sheet_name='Sheet1', index=False)
+    writer.save()
+
+    df_trigger_words_export = pd.read_excel("trigger_words_export.xlsx", header=None)
+    list_of_trigger_words = df_trigger_words_export[0].to_list()
+    wb = openpyxl.load_workbook('TNVED_запрет_вывоза_результат.xlsx')
+    ws = wb.active
+    orangeFill = PatternFill(start_color='FFA500', end_color='FFA500', fill_type='solid')
+    redFill = PatternFill(start_color='FF0000', end_color='FF0000', fill_type='solid')
+    pinkFill = PatternFill(start_color='FFC0CB', end_color='FFC0CB', fill_type='solid')
+
+    i = 0
+    for row in ws['B']:
+        i += 1
+        tnved = str(row.value)
+        for triger_word in list_of_trigger_words:
+            if triger_word in ws[f'A{i}'].value.lower():
+                ws[f'A{i}'].fill = orangeFill
+        if ws[f'E{i}'].value is not None and i != 1 and ws[f'E{i}'].value != '3926909709' and ws[f'E{i}'].value != '621133'\
+                and ws[f'E{i}'].value != '6914900000':
+            print(ws[f'E{i}'].value)
+            ws[f'A{i}'].fill = redFill
+            ws[f'B{i}'].fill = redFill
+            ws[f'E{i}'].fill = redFill
+        try:
+            excludings = ws[f'N{i}'].value.split(",")
+            for exclude in excludings:
+                print(exclude)
+                if exclude in tnved:
+                    ws[f'A{i}'].fill = pinkFill
+                    ws[f'B{i}'].fill = pinkFill
+                    ws[f'N{i}'].fill = pinkFill
+        except:
+            excludings = ws[f'N{i}'].value
+        #print(tnved, excludings)
+
+    wb.save('TNVED_запрет_вывоза_результат.xlsx')
+
+    msg = "ГОТОВО!"
+    mb.showinfo("ИНФО", msg)
+
+
 window = tk.Tk()
 window.title('OZON')
-window.geometry("400x290+500+300")
+window.geometry("400x310+500+300")
 
 button = tk.Button(text="На перевод OZON", width=24, height=2, bg="lightgrey", fg="black", command=start_ozon)
 button.configure(font=('hank', 10))
@@ -338,17 +489,21 @@ button3.configure(font=('hank', 10))
 button4 = tk.Button(text="LD Добавить в базу + обновить реестр", width=35, height=2, bg="lightgrey", fg="black", command=LD_work)
 button4.configure(font=('hank', 10))
 
-button5 = tk.Button(text="Проверка паспорт", width=35, height=2, bg="lightgrey", fg="black", command=passport_check)
+button5 = tk.Button(text="Проверка запрещенка + паспорт", width=35, height=2, bg="lightgrey", fg="black", command=passport_check)
 button5.configure(font=('hank', 10))
 
-button6 = tk.Button(text="Проверка запрещенка", width=35, height=2, bg="lightgrey", fg="black", command=check_excludes)
-button6.configure(font=('hank', 10))
+button7 = tk.Button(text="PUDO", width=35, height=2, bg="lightgrey", fg="black", command=pudo)
+button7.configure(font=('hank', 10))
+button8 = tk.Button(text="ЗАПРЕТ НА ВЫВОЗ", width=35, height=2, bg="lightgrey", fg="black", command=export_warrings)
+button8.configure(font=('hank', 10))
 
 button.pack()
 button2.pack()
 button3.pack()
 button4.pack()
-button6.pack()
+button7.pack()
 button5.pack()
+button8.pack()
+
 
 window.mainloop()
