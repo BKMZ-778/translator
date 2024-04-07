@@ -406,29 +406,32 @@ def export_warrings():
 
     df_merged_10 = pd.merge(df, df_warnings, how='left', left_on='tnvedCode', right_on='triger_tnved')
     df_merged_9 = pd.merge(df_merged_10, df_warnings, how='left', left_on='tnvedCode9', right_on='triger_tnved')
-    df_merged_6 = pd.merge(df_merged_8, df_warnings, how='left', left_on='tnvedCode6', right_on='triger_tnved')
+    df_merged_6 = pd.merge(df_merged_9, df_warnings, how='left', left_on='tnvedCode6', right_on='triger_tnved')
     df_merged_4 = pd.merge(df_merged_6, df_warnings, how='left', left_on='tnvedCode4', right_on='triger_tnved')
 
-    df_merged_4.columns = ['description', 'tnvedCode', 'tnvedCode9','tnvedCode8', 'tnvedCode6', 'tnvedCode4', 'Триггер_код', 'Описание группы/запрет'
-                           , 'Постановление', 'Искл.', 'По 9 знакам', 'Описание группы/запрет_9', 'Постановление_9', 'Искл._9,',
+    df_merged_4.columns = ['description', 'tnvedCode', 'tnvedCode9', 'tnvedCode6', 'tnvedCode4', 'Триггер_код', 'Описание группы/запрет'
+                           , 'Постановление', 'Искл.', 'По 9 знакам', 'Описание группы/запрет_9', 'Постановление_9', 'Искл._9',
                            'По 6 знакам', 'Описание группы/запрет_6', 'Постановление_6', 'Искл._6'
                            , 'По 4 знакам', 'Описание группы/запрет_4', 'Постановление_4', 'Искл._4']
     df = df_merged_4
     df = df.drop('Искл.', axis=1)
     df = df.drop('Искл._6', axis=1)
     df = df.drop('Искл._9', axis=1)
-    df['Искл._4'] = df['Искл._4']
+    #df['Искл._4'] = df['Искл._4']
 
+    df['Постановление'] = df['Постановление'].fillna(df['Постановление_9'])
     df['Постановление'] = df['Постановление'].fillna(df['Постановление_6'])
     df['Постановление'] = df['Постановление'].fillna(df['Постановление_4'])
 
-
+    df['Триггер_код'] = df['Триггер_код'].fillna(df['По 9 знакам'])
     df['Триггер_код'] = df['Триггер_код'].fillna(df['По 6 знакам'])
     df['Триггер_код'] = df['Триггер_код'].fillna(df['По 4 знакам'])
 
-
+    df['Описание группы/запрет'] = df['Описание группы/запрет'].fillna(df['Описание группы/запрет_9'])
     df['Описание группы/запрет'] = df['Описание группы/запрет'].fillna(df['Описание группы/запрет_6'])
     df['Описание группы/запрет'] = df['Описание группы/запрет'].fillna(df['Описание группы/запрет_4'])
+
+    df = df.drop('tnvedCode9', axis=1)
 
     writer = pd.ExcelWriter(f'TNVED_запрет_вывоза_результат.xlsx', engine='openpyxl')
     df.to_excel(writer, sheet_name='Sheet1', index=False)
@@ -450,21 +453,21 @@ def export_warrings():
             if triger_word in ws[f'A{i}'].value.lower():
                 ws[f'A{i}'].fill = orangeFill
         if ws[f'E{i}'].value is not None and i != 1 and ws[f'E{i}'].value != '3926909709' and ws[f'E{i}'].value != '621133'\
-                and ws[f'E{i}'].value != '6914900000':
+                and ws[f'E{i}'].value != '6914900000' and ws[f'E{i}'].value != '7326909807':
             print(ws[f'E{i}'].value)
             ws[f'A{i}'].fill = redFill
             ws[f'B{i}'].fill = redFill
             ws[f'E{i}'].fill = redFill
         try:
-            excludings = ws[f'N{i}'].value.split(",")
+            excludings = ws[f'Q{i}'].value.split(",")
             for exclude in excludings:
                 print(exclude)
                 if exclude in tnved:
                     ws[f'A{i}'].fill = pinkFill
                     ws[f'B{i}'].fill = pinkFill
-                    ws[f'N{i}'].fill = pinkFill
+                    ws[f'Q{i}'].fill = pinkFill
         except:
-            excludings = ws[f'N{i}'].value
+            excludings = ws[f'Q{i}'].value
         #print(tnved, excludings)
 
     wb.save('TNVED_запрет_вывоза_результат.xlsx')
