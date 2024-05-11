@@ -95,6 +95,7 @@ def add_tobaza():
     msg = "Обновленно!"
     mb.showinfo("Информация", msg)
 
+
 def start_LD():
     fileName = filedialog.askopenfilename()
     df_LD_file = pd.read_excel(fileName, sheet_name=0, engine='openpyxl', header=None, usecols='L,M,N,Y', skiprows=1)
@@ -146,6 +147,7 @@ def start_LD():
 
     msg = "Готово!"
     mb.showinfo("Информация", msg)
+
 
 def LD_work():
     fileName = filedialog.askopenfilename()

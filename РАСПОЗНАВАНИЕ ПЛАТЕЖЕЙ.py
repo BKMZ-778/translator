@@ -31,6 +31,7 @@ for row in df_base.iterrows():
         n = 0
         for cell in ws['A']:
             n += 1
+
             if parcel_numb in ws[f'C{n}'].value:
                 print('ok')
                 dict_result[parcel_numb] = receiver, ws[f'B{n}'].value
